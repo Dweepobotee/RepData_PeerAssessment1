@@ -7,19 +7,116 @@ output:
 
 
 ## Loading and preprocessing the data
+Download and save the zipfile in the working directory and rename zipfile "activity"
+```{r, echo=TRUE}
+unzip(zipfile="activity.zip")
+activity<-read.csv("activity.csv", header=TRUE)
+activity$date<-as.Date(activity$date, format="%Y-%m-%d")
+```
 
+### Exploratory Analysis
+```{r, echo=TRUE}
+head(activity)
+```
 
+```{r, echo=TRUE}
+tail(activity)
+```
 
 ## What is mean total number of steps taken per day?
+```{r, echo=TRUE}
+stepsperday<-tapply(activity$steps, activity$date, sum, na.rm=TRUE)
+```
 
+### Histogram of the total number of steps taken per day
+```{r, echo=TRUE}
+hist(stepsperday, breaks=20)
+```
 
+### Mean of the total steps taken per day
+```{r, echo=TRUE}
+meanstepsperday<-mean(stepsperday)
+meanstepsperday
+```
+
+### Median of the total steps taken per day
+```{r, echo=TRUE}
+medianstepsperday<-median(stepsperday)
+medianstepsperday
+```
 
 ## What is the average daily activity pattern?
+### Calculating the average number of steps taken per day
+```{r, echo=TRUE}
+avgstepsperday<-aggregate(x=list(steps=activity$steps), by=list(interval=activity$interval), FUN=mean, na.rm=TRUE)
+```
 
+### Time series plot of average number of steps taken
+```{r, echo=TRUE}
+library(ggplot2)
+g<-ggplot(data=avgstepsperday, aes(x=interval, y=steps))+geom_line()
+g<-g+xlab("5 minute intervals")+ ylab("average number of steps")
+g
+```
 
+### Calculating the five minute interval that contains the maximum number of steps taken
+```{r, echo=TRUE}
+avgstepsperday[which.max(avgstepsperday$steps),]
+```
 
 ## Imputing missing values
+### Counting the number of missing values
+```{r, echo=TRUE}
+nrow(activity[is.na(activity$steps),])
+```
 
+### Imputing missing data
+Missing values are imputed using the mean through the impute function in the Hmisc package.
+```{r, echo=TRUE}
+library(Hmisc)
+imputedactivity<-activity
+imputedactivity$steps<-impute(activity$steps, fun=mean)
+```
 
+### Calculating the total steps per day using the imputed data
+```{r, echo=TRUE}
+imputedstepsperday<-tapply(imputedactivity$steps, imputedactivity$date, sum)
+```
+
+### Histogram of total steps per day using imputed data
+```{r, echo=TRUE}
+hist(imputedstepsperday, breaks=20)
+```
+
+### Mean of total steps per day using imputed data
+```{r, echo=TRUE}
+mean_imputed_steps_per_day<-mean(imputedstepsperday)
+mean_imputed_steps_per_day
+```
+
+### Median of total steps per day using imputed data
+```{r, echo=TRUE}
+median_imputed_steps_per_day<-median(imputedstepsperday)
+median_imputed_steps_per_day
+```
+We can see that there is a difference between the measures before and after imputing the data. Imputing missing data gives higher values for both mean and median.
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+### Constructing a factor variable with two levels: "weekend" and "weekday" that indicates whether a given day is a weekday or a weekend.
+```{r, echo=TRUE}
+imputedactivity$day<-ifelse(as.POSIXlt(imputedactivity$date)$wday %in% c(0,6), 'weekend','weekday')
+```
+
+### Calculating the average steps per day from the imputed data
+```{r, echo=TRUE}
+avg_steps_imputedactivity<-aggregate(steps~interval+day, data=imputedactivity, mean)
+```
+
+### Panel plot of average steps comparing weekdays and weekends
+```{r, echo=TRUE}
+g1<-ggplot(avg_steps_imputedactivity,aes(interval, steps))+geom_line()+facet_grid(day~.)+xlab("5 minute interval")+ylab("mean steps taken")
+g1
+```
+
+
